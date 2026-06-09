@@ -438,8 +438,6 @@ var HT = ['16:00','17:00','18:00','19:00','20:00'];
 var TODOS = HM.concat(HT);
 var CERR = [0, 1];
 
-var reservados = [];
-try { reservados = JSON.parse(localStorage.getItem('vns_res') || '[]'); } catch(e) {}
 var mesV = new Date(); mesV.setDate(1);
 var diaS = null, horaS = null, servP = '', barberoSel = null;
 
@@ -552,9 +550,6 @@ function confirmar() {
   var t = document.getElementById('fTel').value.trim().replace(/\s+/g,'');
   var s = document.getElementById('fServ').value;
   if(!n||!t||!barberoSel||!s){ alert('Por favor complet\u00e1 todos los campos e indic\u00e1 con qui\u00e9n quer\u00e9s el turno.'); return; }
-  if(reservados.indexOf(t)>=0){ document.getElementById('adup').style.display='block'; return; }
-  reservados.push(t);
-  try{ localStorage.setItem('vns_res',JSON.stringify(reservados)); }catch(e){}
   var msg = encodeURIComponent('Hola VNS Studio! Quiero reservar un turno.\n\nNombre: '+n+'\nBarbero: '+barberoSel+'\nServicio: '+s+'\nFecha: '+DIASN[diaS.getDay()]+' '+diaS.getDate()+' de '+MESES[diaS.getMonth()]+'\nHorario: '+horaS+' hs');
   document.getElementById('fmini').style.display='none';
   document.getElementById('tok').style.display='block';
