@@ -445,6 +445,24 @@ function kf(d) { return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'
 function esCerr(d) { return CERR.indexOf(d.getDay()) >= 0; }
 function esPas(d) { var h=new Date(); h.setHours(0,0,0,0); return d<h; }
 
+// Hora actual en Argentina (UTC-3)
+function ahoraAR() {
+  var now = new Date();
+  var utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + (-3 * 60) * 60000);
+}
+
+// Devuelve true si la hora del turno (ej: '15:00') en el dia dado ya paso
+function horaPasada(dia, hora) {
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var d = new Date(dia); d.setHours(0,0,0,0);
+  if(d > hoy) return false;
+  if(d < hoy) return true;
+  var ar = ahoraAR();
+  var hTurno = parseInt(hora.split(':')[0]);
+  return ar.getHours() >= hTurno;
+}
+
 function ocK(k) {
   var o=[];
   TODOS.forEach(function(h) {
@@ -456,7 +474,13 @@ function ocK(k) {
   });
   return o;
 }
-function libres(k) { return TODOS.length - ocK(k).length; }
+function libres(k) {
+  var fecha = new Date(k+'T00:00:00');
+  var oc = ocK(k);
+  return TODOS.filter(function(h) {
+    return oc.indexOf(h) < 0 && !horaPasada(fecha, h);
+  }).length;
+}
 function todoOc(k) { return libres(k) <= 0; }
 
 function renderCal() {
@@ -506,13 +530,15 @@ function renderH() {
   tit.textContent=DIASN[diaS.getDay()]+' '+diaS.getDate()+' de '+MESES[diaS.getMonth()];
   var html='<div class="hgl">Ma\u00f1ana</div><div class="hgrid">';
   HM.forEach(function(h){
-    var isOc=o.indexOf(h)>=0, isSel=horaS===h;
-    html+='<div class="hs2'+(isOc?' oc':isSel?' slc':'')+'"'+(isOc?'':' onclick="selH(\''+h+'\')"')+'>'+h+'</div>';
+    var isOc=o.indexOf(h)>=0, isPas=horaPasada(diaS,h), isSel=horaS===h;
+    var bloq=isOc||isPas;
+    html+='<div class="hs2'+(bloq?' oc':isSel?' slc':'')+'"'+(bloq?'':' onclick="selH(\''+h+'\')"')+'>'+h+'</div>';
   });
   html+='</div><div class="hgl">Tarde</div><div class="hgrid">';
   HT.forEach(function(h){
-    var isOc=o.indexOf(h)>=0, isSel=horaS===h;
-    html+='<div class="hs2'+(isOc?' oc':isSel?' slc':'')+'"'+(isOc?'':' onclick="selH(\''+h+'\')"')+'>'+h+'</div>';
+    var isOc=o.indexOf(h)>=0, isPas=horaPasada(diaS,h), isSel=horaS===h;
+    var bloq=isOc||isPas;
+    html+='<div class="hs2'+(bloq?' oc':isSel?' slc':'')+'"'+(bloq?'':' onclick="selH(\''+h+'\')"')+'>'+h+'</div>';
   });
   html+='</div>';
   cont.innerHTML=html;
