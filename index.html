@@ -579,7 +579,8 @@ function confirmar() {
   var msg = encodeURIComponent('Hola VNS Studio! Quiero reservar un turno.\n\nNombre: '+n+'\nBarbero: '+barberoSel+'\nServicio: '+s+'\nFecha: '+DIASN[diaS.getDay()]+' '+diaS.getDate()+' de '+MESES[diaS.getMonth()]+'\nHorario: '+horaS+' hs');
   document.getElementById('fmini').style.display='none';
   document.getElementById('tok').style.display='block';
-  setTimeout(function(){ window.open('https://wa.me/5493625397100?text='+msg,'_blank'); },600);
+  var waNum = barberoSel==='Lauti' ? '5493624893658' : '5493625397100';
+  setTimeout(function(){ window.open('https://wa.me/'+waNum+'?text='+msg,'_blank'); },600);
 }
 
 function irS(s) { servP=s; ir('turnos'); }
