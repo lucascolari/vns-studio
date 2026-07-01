@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@300;400;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{scroll-behavior:smooth;}
@@ -92,12 +93,8 @@ body{font-family:'Barlow',sans-serif;background:#0d0d0d;color:#fff;min-height:10
     </div>
     <div class="login-title">Panel de turnos</div>
     <p class="login-desc">Iniciá sesión para gestionar tu agenda.</p>
-    <label class="login-label">Barbero</label>
-    <select class="login-select" id="loginUser">
-      <option value="">Seleccioná tu nombre</option>
-      <option value="Lauti">Lauti</option>
-      <option value="Santi">Santi</option>
-    </select>
+    <label class="login-label">Email</label>
+    <input class="login-input" type="email" id="loginEmail" placeholder="tu-email" autocomplete="username">
     <label class="login-label">Contraseña</label>
     <input class="login-input" type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
@@ -159,7 +156,15 @@ body{font-family:'Barlow',sans-serif;background:#0d0d0d;color:#fff;min-height:10
 
 <script>
 // ── FIREBASE ──
-var firebaseConfig = { databaseURL: "https://vns-studio-default-rtdb.firebaseio.com" };
+var firebaseConfig = {
+  apiKey: "AIzaSyCCzaRREVnmnlFJZRqF4TEpiuhJ6EvLDFU",
+  authDomain: "vns-studio.firebaseapp.com",
+  databaseURL: "https://vns-studio-default-rtdb.firebaseio.com",
+  projectId: "vns-studio",
+  storageBucket: "vns-studio.firebasestorage.app",
+  messagingSenderId: "1002248088854",
+  appId: "1:1002248088854:web:8db770f7bbe0f424c57437"
+};
 firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 
@@ -177,9 +182,6 @@ db.ref('.info/connected').on('value', function(snap) {
   }
 });
 
-// ── CREDENCIALES ──
-var CREDS = { 'Lauti': 'vnsstudio', 'Santi': 'vnsstudio' };
-
 var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var DIASN = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
 var HM = ['9:00','10:00','11:00','12:00','13:00'];
@@ -195,25 +197,35 @@ var dbListener = null;
 
 // ── LOGIN ──
 function doLogin() {
-  var u = document.getElementById('loginUser').value;
-  var p = document.getElementById('loginPass').value;
-  if (!u || !p) { mostrarError('Completá todos los campos.'); return; }
-  if (CREDS[u] && CREDS[u] === p) {
-    userActivo = u;
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('panel').style.display = 'block';
-    document.getElementById('userLabel').textContent = u;
-    document.getElementById('panelTitle').textContent = 'Mi agenda — ' + u;
-    // Escuchar Firebase
-    dbListener = db.ref('ocupados').on('value', function(snap) {
-      fbData = snap.val() || {};
+  var email = document.getElementById('loginEmail').value.trim();
+  var pass  = document.getElementById('loginPass').value;
+  if (!email || !pass) { mostrarError('Completá email y contraseña.'); return; }
+  firebase.auth().signInWithEmailAndPassword(email, pass)
+    .then(function(cred) {
+      return db.ref('barberos/' + cred.user.uid).once('value');
+    })
+    .then(function(snap) {
+      if (!snap) return; // ya se manejó un error arriba
+      var nombre = snap.val();
+      if (!nombre) { firebase.auth().signOut(); mostrarError('Tu cuenta no tiene un barbero asignado.'); return; }
+      userActivo = nombre;
+      document.getElementById('loginWrap').style.display = 'none';
+      document.getElementById('panel').style.display = 'block';
+      document.getElementById('userLabel').textContent = nombre;
+      document.getElementById('panelTitle').textContent = 'Mi agenda — ' + nombre;
+      // Escuchar Firebase
+      dbListener = db.ref('ocupados').on('value', function(s) {
+        fbData = s.val() || {};
+        renderCal();
+        if (diaS) renderSlots();
+      });
       renderCal();
-      if (diaS) renderSlots();
+    })
+    .catch(function(err) {
+      var msg = 'Email o contraseña incorrectos.';
+      if (err.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Esperá unos minutos.';
+      mostrarError(msg);
     });
-    renderCal();
-  } else {
-    mostrarError('Usuario o contraseña incorrectos.');
-  }
 }
 
 function mostrarError(msg) {
@@ -224,9 +236,10 @@ function mostrarError(msg) {
 
 function logout() {
   if (dbListener) db.ref('ocupados').off('value', dbListener);
+  firebase.auth().signOut();
   userActivo = null; diaS = null; fbData = {};
   document.getElementById('loginPass').value = '';
-  document.getElementById('loginUser').value = '';
+  document.getElementById('loginEmail').value = '';
   document.getElementById('loginError').style.display = 'none';
   document.getElementById('panel').style.display = 'none';
   document.getElementById('loginWrap').style.display = 'flex';
